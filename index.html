@@ -143,7 +143,7 @@ footer{margin-top:22px;color:var(--muted);font-size:12px;text-align:center;paddi
   <section class="cats" id="cats"></section>
   <main id="lists"></main>
 
-  <footer>Category % = earned ÷ possible. Extra credit adds to earned points only (0 possible), like Aspen. Tap or hold − / + to change scores in 0.5 steps. LEQ is a projected assignment not yet in Aspen: set its score and total points, or uncheck “Count in grade” to leave it out.</footer>
+  <footer>Category % = earned ÷ possible. Extra credit adds to earned points only (0 possible), like Aspen. Tap or hold − / + to change scores in 0.5 steps. LEQ and Chapter 9 Reading Check are projected assignments not yet in Aspen: set their scores (and the LEQ’s total points), or uncheck “Count in grade” to leave one out.</footer>
 </div>
 
 <script>
@@ -153,9 +153,10 @@ footer{margin-top:22px;color:var(--muted);font-size:12px;text-align:center;paddi
   // ---- Data (name, earned, possible). possible = 0 means extra credit. ----
   var DATA = [
     { id:"awc", name:"Assessments, Writing & Class", weight:0.80, items:[
-      ["LEQ",24,24,{proj:true}],
+      ["LEQ",20,20,{proj:true, editPoss:true}],
+      ["Chapter 9 Reading Check",5,5,{proj:true}],
       ["Map Quiz",20,20],
-      ["Period 3 Test MCQ",21,25],
+      ["Period 3 Test MCQ",20,20],
       ["Veteran's Day Essay EC",3,0],
       ["Revolution from Within Sources",2,2],
       ["Chapter 6 Reading Check",4.5,5],
@@ -188,9 +189,9 @@ footer{margin-top:22px;color:var(--muted);font-size:12px;text-align:center;paddi
   var cats = DATA.map(function(c){
     return { id:c.id, name:c.name, weight:c.weight, ui:{},
       items:c.items.map(function(a){
-        var ec = a[2] === 0, proj = !!(a[3] && a[3].proj);
+        var o = a[3] || {}, ec = a[2] === 0, proj = !!o.proj;
         return { name:a[0], actual:a[1], earned:a[1], possible:a[2], basePossible:a[2],
-                 ec:ec, proj:proj, include:true, ui:{} };
+                 ec:ec, proj:proj, editPoss:!!o.editPoss, include:true, ui:{} };
       })
     };
   });
@@ -298,22 +299,25 @@ footer{margin-top:22px;color:var(--muted);font-size:12px;text-align:center;paddi
       if (it.proj){
         li.classList.add("proj");
         var tot = h("div","tot");
-        tot.appendChild(h("span","tot-label","Total points"));
-        var tc = h("div","tot-ctrl");
-        var pm = h("button","step","−"); pm.type = "button"; pm.setAttribute("aria-label","Decrease total points for " + it.name);
-        var pp = h("button","step","+"); pp.type = "button"; pp.setAttribute("aria-label","Increase total points for " + it.name);
-        it.ui.posVal = h("span","tot-val");
-        tc.appendChild(pm); tc.appendChild(it.ui.posVal); tc.appendChild(pp);
-        tot.appendChild(tc);
+        if (it.editPoss){
+          tot.appendChild(h("span","tot-label","Total points"));
+          var tc = h("div","tot-ctrl");
+          var pm = h("button","step","−"); pm.type = "button"; pm.setAttribute("aria-label","Decrease total points for " + it.name);
+          var pp = h("button","step","+"); pp.type = "button"; pp.setAttribute("aria-label","Increase total points for " + it.name);
+          it.ui.posVal = h("span","tot-val");
+          tc.appendChild(pm); tc.appendChild(it.ui.posVal); tc.appendChild(pp);
+          tot.appendChild(tc);
+          it.ui.pMinus = pm; it.ui.pPlus = pp;
+          bindStep(pm, function(){ return stepPossible(it, -1); });
+          bindStep(pp, function(){ return stepPossible(it, +1); });
+        }
         var lab = h("label","inc");
         var cb = h("input"); cb.type = "checkbox"; cb.checked = true;
         cb.addEventListener("change", function(){ it.include = cb.checked; update(); });
         lab.appendChild(cb); lab.appendChild(document.createTextNode("Count in grade"));
         tot.appendChild(lab);
         li.appendChild(tot);
-        it.ui.pMinus = pm; it.ui.pPlus = pp; it.ui.include = cb;
-        bindStep(pm, function(){ return stepPossible(it, -1); });
-        bindStep(pp, function(){ return stepPossible(it, +1); });
+        it.ui.include = cb;
       }
       ul.appendChild(li);
 
@@ -382,10 +386,12 @@ footer{margin-top:22px;color:var(--muted);font-size:12px;text-align:center;paddi
         it.ui.pct.textContent = it.ec ? "+" + fmtPts(it.earned) + " pts" : fmtPctTrim(it.earned / it.possible * 100);
         it.ui.minus.disabled = it.earned <= 0;
         it.ui.plus.disabled = it.earned >= maxOf(it);
-        if (it.proj){
+        if (it.editPoss){
           it.ui.posVal.textContent = fmtPts(it.possible);
           it.ui.pMinus.disabled = it.possible <= POSS_MIN;
           it.ui.pPlus.disabled = it.possible >= POSS_MAX;
+        }
+        if (it.proj){
           it.ui.include.checked = it.include;
           it.ui.row.classList.toggle("excluded", !it.include);
         }
